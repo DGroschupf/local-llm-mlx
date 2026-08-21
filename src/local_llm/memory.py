@@ -44,7 +44,9 @@ def build_memory_status(pid: int | None) -> dict[str, Any]:
     }
 
 
-def build_fit_status(memory: dict[str, Any], active_model: str | None) -> dict[str, Any]:
+def build_fit_status(
+    memory: dict[str, Any], active_model: str | None
+) -> dict[str, Any]:
     available_gb = memory.get("available_gb")
     pressure = memory.get("pressure", "unknown")
     result: dict[str, Any] = {"active_model": active_model, "models": {}}
