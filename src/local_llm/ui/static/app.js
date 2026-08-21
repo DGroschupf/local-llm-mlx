@@ -278,22 +278,33 @@ function claudeCommand(status) {
 }
 
 function continueCommand(status) {
-  const active = status.state || {};
-  const activeModel = active.model_name || "qwen";
-  let modelStr = "keXjos/Qwen3.8-9B-mlx-4Bit";
-  if (active.model) {
-    modelStr = active.model;
-  } else if (activeModel === "devstral") {
-    modelStr = "mlx-community/Devstral-Small-2-24B-Instruct-2512-OptiQ-4bit";
-  }
-  
   return `{
   "models": [
     {
-      "title": "Local ${activeModel}",
+      "title": "Qwen Local",
       "provider": "openai",
-      "model": "${modelStr}",
-      "apiBase": "http://127.0.0.1:8080/v1"
+      "model": "keXjos/Qwen3.8-9B-mlx-4Bit",
+      "apiBase": "http://127.0.0.1:5177/v1",
+      "apiKey": "sk-optiq-local",
+      "contextLength": 32768,
+      "completionOptions": {
+        "maxTokens": 2048
+      },
+      "roles": ["chat", "edit", "apply"],
+      "capabilities": ["tool_use"]
+    },
+    {
+      "title": "Devstral Local",
+      "provider": "openai",
+      "model": "mlx-community/Devstral-Small-2-24B-Instruct-2512-OptiQ-4bit",
+      "apiBase": "http://127.0.0.1:5177/v1",
+      "apiKey": "sk-optiq-local",
+      "contextLength": 16384,
+      "completionOptions": {
+        "maxTokens": 2048
+      },
+      "roles": ["chat", "edit", "apply"],
+      "capabilities": ["tool_use"]
     }
   ]
 }`;
