@@ -27,9 +27,9 @@ def build_memory_status(pid: int | None) -> dict[str, Any]:
         available_gb = free_pages * page_size / 1024**3
         used_gb = total_gb - available_gb
 
-        if swap.get("used_gb", 0) > 2 or available_gb < 2:
+        if available_gb < 2:
             pressure = "red"
-        elif swap.get("used_gb", 0) > 0.5 or available_gb < 5:
+        elif available_gb < 5:
             pressure = "yellow"
         else:
             pressure = "green"
@@ -46,7 +46,6 @@ def build_memory_status(pid: int | None) -> dict[str, Any]:
 
 def build_fit_status(memory: dict[str, Any], active_model: str | None) -> dict[str, Any]:
     available_gb = memory.get("available_gb")
-    swap_used_gb = memory.get("swap_used_gb", 0)
     pressure = memory.get("pressure", "unknown")
     result: dict[str, Any] = {"active_model": active_model, "models": {}}
 
@@ -55,9 +54,9 @@ def build_fit_status(memory: dict[str, Any], active_model: str | None) -> dict[s
         if available_gb is None:
             level = "unknown"
             message = "Memory availability could not be read."
-        elif pressure == "red" or swap_used_gb > 2:
+        elif pressure == "red":
             level = "risky"
-            message = "High pressure or swap is already visible."
+            message = "Available memory is critically low."
         elif available_gb < needed:
             level = "tight"
             message = f"Estimated headroom below {needed:.1f} GB."
