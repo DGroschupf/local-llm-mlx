@@ -86,6 +86,8 @@ def _make_handler(
                 self._send_json(build_status())
             elif self.path == "/api/models":
                 self._send_json(model_payload())
+            elif self.path == "/v1/models":
+                self._handle_v1_models()
             else:
                 self.send_error(404)
 
@@ -119,6 +121,8 @@ def _make_handler(
                 self._send_json({"ok": True})
             elif self.path == "/api/chat":
                 self._handle_chat()
+            elif self.path.startswith("/v1/"):
+                self._handle_v1_proxy()
             else:
                 self.send_error(404)
 
@@ -182,6 +186,131 @@ def _make_handler(
             except urllib.error.URLError as exc:
                 self.send_error(502, f"Model server is not ready: {exc}")
                 return
+
+        def _handle_v1_models(self) -> None:
+            data = [
+                {
+                    "id": name,
+                    "object": "model",
+                    "created": int(time.time()),
+                    "owned_by": "local",
+                }
+                for name in MODELS.keys()
+            ]
+            self._send_json({"object": "list", "data": data})
+
+        def _handle_v1_proxy(self) -> None:
+            body = self._read_json()
+            model_id = body.get("model")
+
+            profile_name = None
+            if model_id in MODELS:
+                profile_name = model_id
+            elif model_id:
+                for name, profile in MODELS.items():
+                    if profile.model == model_id:
+                        profile_name = name
+                        break
+
+            if not profile_name:
+                if MODELS:
+                    profile_name = list(MODELS.keys())[0]
+                else:
+                    self.send_error(400, "No models configured")
+                    return
+
+            profile = MODELS[profile_name]
+            body["model"] = profile.model
+
+            with state_lock:
+                state = load_state()
+                is_running = is_pid_alive(state.get("pid"))
+                current_model = state.get("model_name")
+
+            if not is_running or current_model != profile_name:
+                try:
+                    state = start_server(
+                        profile,
+                        port=server_port,
+                        idle_seconds=idle_seconds,
+                        backend="mlx",
+                    )
+                except ValueError as exc:
+                    self.send_error(400, str(exc))
+                    return
+
+                url = f"http://{state.get('host', '127.0.0.1')}:{state.get('port', 8080)}/v1/models"
+                ready = False
+                for _ in range(30):
+                    try:
+                        req = urllib.request.Request(
+                            url,
+                            headers={"Authorization": f"Bearer {LOCAL_AUTH_TOKEN}"}
+                        )
+                        with urllib.request.urlopen(req, timeout=1):
+                            ready = True
+                            break
+                    except Exception:
+                        time.sleep(1)
+
+                if not ready:
+                    self.send_error(502, "Model server failed to start")
+                    return
+
+            self._proxy_to_model_server(body, self.path)
+
+        def _proxy_to_model_server(self, body_dict: dict[str, Any], path: str) -> None:
+            state = load_state()
+            if not is_pid_alive(state.get("pid")):
+                self.send_error(502, "Model server stopped unexpectedly")
+                return
+
+            with state_lock:
+                fresh_state = load_state()
+                if is_pid_alive(fresh_state.get("pid")):
+                    fresh_state["last_activity_at"] = time.time()
+                    save_state(fresh_state)
+
+            url = f"http://{state.get('host', '127.0.0.1')}:{state.get('port', 8080)}{path}"
+
+            try:
+                request = urllib.request.Request(
+                    url,
+                    data=json.dumps(body_dict).encode("utf-8"),
+                    headers={
+                        "Authorization": f"Bearer {LOCAL_AUTH_TOKEN}",
+                        "Content-Type": "application/json",
+                    },
+                    method="POST",
+                )
+                with urllib.request.urlopen(request, timeout=600) as response:
+                    self.send_response(response.status)
+                    for header, value in response.headers.items():
+                        if header.lower() not in ("transfer-encoding", "content-length"):
+                            self.send_header(header, value)
+                    self.end_headers()
+
+                    while True:
+                        chunk = response.read(8192)
+                        if not chunk:
+                            break
+                        try:
+                            self.wfile.write(chunk)
+                            self.wfile.flush()
+                        except (BrokenPipeError, ConnectionResetError):
+                            break
+            except urllib.error.HTTPError as exc:
+                self.send_response(exc.code)
+                for header, value in exc.headers.items():
+                    if header.lower() not in ("transfer-encoding", "content-length"):
+                        self.send_header(header, value)
+                self.end_headers()
+                try:
+                    self.wfile.write(exc.read())
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
+            except urllib.error.URLError as exc:
+                self.send_error(502, f"Model server proxy error: {exc}")
 
         def _read_json(self) -> dict[str, Any]:
             length = int(self.headers.get("Content-Length", "0"))
