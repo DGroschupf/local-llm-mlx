@@ -277,14 +277,19 @@ def _make_handler(
 
             url = f"http://{state.get('host', '127.0.0.1')}:{state.get('port', 8080)}{path}"
 
+            req_headers = {
+                "Authorization": f"Bearer {LOCAL_AUTH_TOKEN}",
+                "Content-Type": "application/json",
+            }
+            for k, v in self.headers.items():
+                if k.lower() not in ("host", "authorization", "content-length", "content-type", "connection"):
+                    req_headers[k] = v
+
             try:
                 request = urllib.request.Request(
                     url,
                     data=json.dumps(body_dict).encode("utf-8"),
-                    headers={
-                        "Authorization": f"Bearer {LOCAL_AUTH_TOKEN}",
-                        "Content-Type": "application/json",
-                    },
+                    headers=req_headers,
                     method="POST",
                 )
                 with urllib.request.urlopen(request, timeout=600) as response:
