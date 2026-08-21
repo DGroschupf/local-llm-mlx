@@ -207,20 +207,27 @@ def _make_handler(
             model_id = body.get("model")
 
             profile_name = None
-            if model_id in MODELS:
+            if isinstance(model_id, str) and model_id in MODELS:
                 profile_name = model_id
-            elif model_id:
+            elif isinstance(model_id, str) and model_id:
+                normalized_model_id = model_id.strip().lower()
                 for name, profile in MODELS.items():
-                    if profile.model == model_id:
+                    aliases = {
+                        name.lower(),
+                        f"{name.lower()} local",
+                        profile.model.lower(),
+                    }
+                    if normalized_model_id in aliases:
                         profile_name = name
                         break
 
             if not profile_name:
-                if MODELS:
-                    profile_name = list(MODELS.keys())[0]
-                else:
-                    self.send_error(400, "No models configured")
-                    return
+                configured_models = ", ".join(MODELS)
+                self.send_error(
+                    400,
+                    f"Unknown model {model_id!r}; configured models: {configured_models}",
+                )
+                return
 
             profile = MODELS[profile_name]
             body["model"] = f"{profile.model}:no-think"
