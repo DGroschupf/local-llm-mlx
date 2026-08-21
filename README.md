@@ -94,13 +94,11 @@ Open:
 http://127.0.0.1:5177
 ```
 
-The dashboard refreshes every 3 seconds by default. To make it quieter or faster:
+The dashboard refreshes every 1 second by default. To make it quieter:
 
 ```bash
 uv run local-llm ui --refresh-seconds 120
 ```
-
-For near-live updates, `--refresh-seconds 1` is also supported.
 
 The dashboard can:
 
