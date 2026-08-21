@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 APP_DIR = Path.cwd() / ".local-llm"
 STATE_FILE = APP_DIR / "state.json"
 LOG_DIR = APP_DIR / "logs"
