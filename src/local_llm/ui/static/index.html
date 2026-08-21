@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>local-llm</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>local-llm</h1>
+      <p>MLX runner for Qwen and Devstral</p>
+    </div>
+    <button type="button" data-action="refresh">Refresh</button>
+  </header>
+
+  <main class="layout">
+    <div class="left-column">
+      <section class="panel stack">
+        <div class="section-header">
+          <h2>Server</h2>
+          <span id="activePill" class="pill">Loading</span>
+        </div>
+        <p id="serverText" class="muted"></p>
+        <div class="actions">
+          <button type="button" class="primary" data-start-model="qwen">Start Qwen</button>
+          <button type="button" class="primary" data-start-model="devstral">Start Devstral</button>
+          <button type="button" class="danger" data-action="stop">Stop</button>
+        </div>
+      </section>
+
+      <section class="panel stack">
+        <h2>Memory</h2>
+        <div class="metrics">
+          <div>
+            <span>Pressure</span>
+            <strong id="pressure">-</strong>
+          </div>
+          <div>
+            <span>Process RSS</span>
+            <strong id="rss">-</strong>
+          </div>
+          <div>
+            <span>Available</span>
+            <strong id="available">-</strong>
+          </div>
+          <div>
+            <span>Swap Used</span>
+            <strong id="swap">-</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel stack">
+        <h2>Model Fit</h2>
+        <div id="fit" class="fit-list"></div>
+      </section>
+
+      <section class="panel stack">
+        <h2>Terminal Commands</h2>
+        <pre id="commands"></pre>
+      </section>
+    </div>
+
+    <section class="panel stack chat-panel">
+      <div class="section-header">
+        <h2>Browser Chat</h2>
+        <span id="refreshText" class="muted"></span>
+      </div>
+      <textarea id="prompt" placeholder="Ask the active local model something..."></textarea>
+      <div class="actions">
+        <button type="button" class="primary" data-action="send">Send</button>
+        <button type="button" data-action="clear">Clear</button>
+      </div>
+      <pre id="answer"></pre>
+    </section>
+  </main>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>

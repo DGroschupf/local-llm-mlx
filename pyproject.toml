@@ -1,0 +1,20 @@
+[project]
+name = "local-llm"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Dennis Groschupf Mac", email = "dennis.groschupf@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "mlx-lm>=0.31.3",
+    "mlx-optiq>=0.4.27",
+]
+
+[project.scripts]
+local-llm = "local_llm:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
