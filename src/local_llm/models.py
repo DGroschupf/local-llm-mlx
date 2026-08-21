@@ -23,6 +23,7 @@ MODELS: dict[str, ModelProfile] = {
         size_gb=5.04,
         chat_kv_size=32768,
         max_tokens=2048,
+        supports_agent=True,
     ),
     "devstral": ModelProfile(
         name="devstral",

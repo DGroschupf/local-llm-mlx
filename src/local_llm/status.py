@@ -38,16 +38,16 @@ def _commands() -> dict[str, dict[str, str]]:
         }
         if profile.supports_agent:
             values["serve_agent"] = f"uv run local-llm serve {name} --backend agent"
-            values["claude"] = _claude_command(profile.model)
+            values["claude"] = _claude_command(profile.model, profile.name.title())
         commands[name] = values
     return commands
 
 
-def _claude_command(model: str) -> str:
+def _claude_command(model: str, display_name: str) -> str:
     return (
         'ANTHROPIC_BASE_URL="http://127.0.0.1:8080" '
         'ANTHROPIC_AUTH_TOKEN="sk-optiq-local" '
         f'ANTHROPIC_CUSTOM_MODEL_OPTION="{model}" '
-        'ANTHROPIC_CUSTOM_MODEL_OPTION_NAME="Devstral Local" '
+        f'ANTHROPIC_CUSTOM_MODEL_OPTION_NAME="{display_name} Local" '
         f'claude --model "{model}"'
     )

@@ -10,7 +10,7 @@ It gives you an `ollama`-like command surface for:
 - one active model server at a time
 - idle unloading
 - a local dashboard for starting/stopping models and watching memory pressure
-- Devstral agent mode through `mlx-optiq` for Claude Code
+  - Qwen and Devstral agent modes through `mlx-optiq`
 
 ## Project Structure
 
@@ -61,6 +61,12 @@ Start Devstral in agent mode with `mlx-optiq`:
 uv run local-llm serve devstral --backend agent
 ```
 
+Qwen can also be started through the agent backend:
+
+```bash
+uv run local-llm serve qwen --backend agent
+```
+
 The supervised server uses `127.0.0.1:8080` by default and unloads after 15 minutes
 of inactivity. It also watches process CPU time, so active generation should refresh
 the idle timer even when a client calls `mlx_lm.server` directly.
@@ -103,6 +109,7 @@ uv run local-llm ui --refresh-seconds 120
 The dashboard can:
 
 - start Qwen
+- start Qwen Agent through `mlx-optiq`
 - start Devstral
 - start Devstral Agent through `mlx-optiq`
 - stop the active server
