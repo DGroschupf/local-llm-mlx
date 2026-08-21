@@ -73,6 +73,8 @@ def _make_handler(
     refresh_seconds: int,
 ) -> type[BaseHTTPRequestHandler]:
     class Handler(BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.1"
+
         def do_GET(self) -> None:
             if self.path == "/" or self.path.startswith("/?"):
                 self._send_static("index.html")
@@ -172,6 +174,7 @@ def _make_handler(
                     self.send_response(200)
                     self.send_header("Content-Type", "text/event-stream")
                     self.send_header("Cache-Control", "no-cache")
+                    self.send_header("Connection", "close")
                     self.end_headers()
 
                     while True:
@@ -239,29 +242,42 @@ def _make_handler(
                     self.send_error(400, str(exc))
                     return
 
-                url = f"http://{state.get('host', '127.0.0.1')}:{state.get('port', 8080)}/v1/models"
-                ready = False
-                for _ in range(60):
-                    try:
-                        req = urllib.request.Request(
-                            url,
-                            headers={"Authorization": f"Bearer {LOCAL_AUTH_TOKEN}"}
-                        )
-                        with urllib.request.urlopen(req, timeout=1):
-                            ready = True
-                            break
-                    except urllib.error.HTTPError:
-                        # Server is up and speaking HTTP, even if it returned 404/401
-                        ready = True
-                        break
-                    except Exception:
-                        time.sleep(1)
-
-                if not ready:
-                    self.send_error(502, "Model server failed to start")
+            if not self._wait_for_model_server(state):
+                # A stale PID can survive briefly after the child has exited.
+                stop_server()
+                try:
+                    state = start_server(
+                        profile,
+                        port=server_port,
+                        idle_seconds=idle_seconds,
+                        backend="agent" if profile.supports_agent else "mlx",
+                    )
+                except ValueError as exc:
+                    self.send_error(400, str(exc))
+                    return
+                if not self._wait_for_model_server(state):
+                    self.send_error(502, "Model server failed to become ready")
                     return
 
             self._proxy_to_model_server(body, self.path)
+
+        @staticmethod
+        def _wait_for_model_server(state: dict[str, Any]) -> bool:
+            url = f"http://{state.get('host', '127.0.0.1')}:{state.get('port', 8080)}/v1/models"
+            for _ in range(60):
+                try:
+                    request = urllib.request.Request(
+                        url,
+                        headers={"Authorization": f"Bearer {LOCAL_AUTH_TOKEN}"},
+                    )
+                    with urllib.request.urlopen(request, timeout=1):
+                        return True
+                except urllib.error.HTTPError:
+                    # An HTTP response proves that the server is reachable.
+                    return True
+                except (OSError, urllib.error.URLError):
+                    time.sleep(1)
+            return False
 
         def _proxy_to_model_server(self, body_dict: dict[str, Any], path: str) -> None:
             state = load_state()
@@ -282,7 +298,13 @@ def _make_handler(
                 "Content-Type": "application/json",
             }
             for k, v in self.headers.items():
-                if k.lower() not in ("host", "authorization", "content-length", "content-type", "connection"):
+                if k.lower() not in (
+                    "host",
+                    "authorization",
+                    "content-length",
+                    "content-type",
+                    "connection",
+                ):
                     req_headers[k] = v
 
             try:
@@ -294,9 +316,22 @@ def _make_handler(
                 )
                 with urllib.request.urlopen(request, timeout=600) as response:
                     self.send_response(response.status)
+                    is_chunked = False
                     for header, value in response.headers.items():
-                        if header.lower() not in ("transfer-encoding", "content-length"):
+                        if (
+                            header.lower() == "transfer-encoding"
+                            and value.lower() == "chunked"
+                        ):
+                            is_chunked = True
+                        if header.lower() not in (
+                            "transfer-encoding",
+                            "content-length",
+                            "connection",
+                        ):
                             self.send_header(header, value)
+                    if is_chunked:
+                        self.send_header("Transfer-Encoding", "chunked")
+                    self.send_header("Connection", "close")
                     self.end_headers()
 
                     while True:
@@ -304,10 +339,22 @@ def _make_handler(
                         if not line:
                             break
                         try:
-                            self.wfile.write(line)
+                            if is_chunked:
+                                self.wfile.write(f"{len(line):X}\r\n".encode("ascii"))
+                                self.wfile.write(line)
+                                self.wfile.write(b"\r\n")
+                            else:
+                                self.wfile.write(line)
                             self.wfile.flush()
                         except (BrokenPipeError, ConnectionResetError):
                             break
+
+                    if is_chunked:
+                        try:
+                            self.wfile.write(b"0\r\n\r\n")
+                            self.wfile.flush()
+                        except (BrokenPipeError, ConnectionResetError):
+                            pass
             except urllib.error.HTTPError as exc:
                 self.send_response(exc.code)
                 for header, value in exc.headers.items():
