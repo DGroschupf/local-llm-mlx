@@ -170,8 +170,11 @@ def _make_handler(
                         line = response.readline()
                         if not line:
                             break
-                        self.wfile.write(line)
-                        self.wfile.flush()
+                        try:
+                            self.wfile.write(line)
+                            self.wfile.flush()
+                        except (BrokenPipeError, ConnectionResetError):
+                            break
             except urllib.error.URLError as exc:
                 self.send_error(502, f"Model server is not ready: {exc}")
                 return

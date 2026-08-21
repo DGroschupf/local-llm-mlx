@@ -145,8 +145,10 @@ async function sendPrompt() {
           if (dataStr === "[DONE]") continue;
           try {
             const data = JSON.parse(dataStr);
-            const content = data.choices?.[0]?.delta?.content || "";
-            answer.textContent += content;
+            const delta = data.choices?.[0]?.delta || {};
+            const content = delta.content || "";
+            const reasoning = delta.reasoning_content || "";
+            answer.textContent += reasoning + content;
           } catch (e) {
             console.error("Failed to parse SSE data:", dataStr, e);
           }
