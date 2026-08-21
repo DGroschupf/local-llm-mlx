@@ -197,7 +197,8 @@ function renderStatus(status) {
     : "No model server loaded.";
 
   const pressure = document.getElementById("pressure");
-  pressure.textContent = memory.pressure || "-";
+  const pVal = memory.pressure || "-";
+  pressure.textContent = pVal !== "-" ? pVal.charAt(0).toUpperCase() + pVal.slice(1) : "-";
   pressure.className = memory.pressure || "";
 
   document.getElementById("rss").textContent = formatGb(memory.process_rss_gb);

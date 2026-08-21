@@ -33,6 +33,22 @@ src/local_llm/
       app.js           dashboard behavior
 ```
 
+## Setup
+
+This project uses [uv](https://docs.astral.sh/uv/) for fast dependency management. If you don't have it installed yet:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Sync the dependencies (this creates a `.venv` and installs the required `mlx-lm` and `mlx-optiq` packages):
+
+```bash
+uv sync
+```
+
+The model weights will be downloaded automatically from Hugging Face the first time you run a model.
+
 ## Commands
 
 List configured models:
