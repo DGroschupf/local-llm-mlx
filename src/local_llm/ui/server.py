@@ -223,7 +223,7 @@ def _make_handler(
                     return
 
             profile = MODELS[profile_name]
-            body["model"] = profile.model
+            body["model"] = f"{profile.model}:no-think"
 
             with state_lock:
                 state = load_state()
@@ -382,7 +382,7 @@ def _make_handler(
                 delta = choice.get("delta", {})
                 if "reasoning" in delta and "reasoning_content" not in delta:
                     delta["reasoning_content"] = delta.pop("reasoning")
-            return f"data: {json.dumps(payload)}\n".encode("utf-8")
+            return f"data: {json.dumps(payload)}\n".encode()
 
         def _read_json(self) -> dict[str, Any]:
             length = int(self.headers.get("Content-Length", "0"))
