@@ -204,7 +204,7 @@ models:
     provider: openai
     model: keXjos/Qwen3.8-9B-mlx-4Bit
     apiBase: http://127.0.0.1:8080/v1
-    apiKey: sk-local
+    apiKey: sk-optiq-local
     roles:
       - chat
       - edit
@@ -214,7 +214,7 @@ models:
     provider: openai
     model: mlx-community/Devstral-Small-2-24B-Instruct-2512-OptiQ-4bit
     apiBase: http://127.0.0.1:8080/v1
-    apiKey: sk-local
+    apiKey: sk-optiq-local
     roles:
       - chat
       - edit

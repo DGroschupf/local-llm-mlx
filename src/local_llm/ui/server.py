@@ -13,6 +13,7 @@ from local_llm.config import (
     DEFAULT_IDLE_SECONDS,
     DEFAULT_SUPERVISOR_TICK_SECONDS,
     DEFAULT_UI_REFRESH_SECONDS,
+    LOCAL_AUTH_TOKEN,
 )
 from local_llm.models import MODELS, model_payload
 from local_llm.processes import is_pid_alive
@@ -157,7 +158,10 @@ def _make_handler(
                 request = urllib.request.Request(
                     url,
                     data=json.dumps(payload).encode("utf-8"),
-                    headers={"Content-Type": "application/json"},
+                    headers={
+                        "Authorization": f"Bearer {LOCAL_AUTH_TOKEN}",
+                        "Content-Type": "application/json",
+                    },
                     method="POST",
                 )
                 with urllib.request.urlopen(request, timeout=600) as response:

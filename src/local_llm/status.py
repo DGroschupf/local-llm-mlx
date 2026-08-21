@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from local_llm.config import LOCAL_AUTH_TOKEN
 from local_llm.memory import build_fit_status, build_memory_status
 from local_llm.models import MODELS, model_payload
 from local_llm.processes import is_pid_alive
@@ -46,7 +47,7 @@ def _commands() -> dict[str, dict[str, str]]:
 def _claude_command(model: str, display_name: str) -> str:
     return (
         'ANTHROPIC_BASE_URL="http://127.0.0.1:8080" '
-        'ANTHROPIC_AUTH_TOKEN="sk-optiq-local" '
+        f'ANTHROPIC_AUTH_TOKEN="{LOCAL_AUTH_TOKEN}" '
         f'ANTHROPIC_CUSTOM_MODEL_OPTION="{model}" '
         f'ANTHROPIC_CUSTOM_MODEL_OPTION_NAME="{display_name} Local" '
         f'claude --model "{model}"'
