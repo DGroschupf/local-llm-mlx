@@ -25,6 +25,12 @@ def main() -> None:
     serve_parser.add_argument("--host", default="127.0.0.1")
     serve_parser.add_argument("--port", type=int, default=8080)
     serve_parser.add_argument("--idle-seconds", type=int, default=DEFAULT_IDLE_SECONDS)
+    serve_parser.add_argument(
+        "--backend",
+        choices=("mlx", "agent"),
+        default="mlx",
+        help="Use mlx_lm.server or Devstral's optiq agent server.",
+    )
 
     sub.add_parser("stop", help="Stop the active model server.")
     sub.add_parser("status", help="Show active model and memory status.")
@@ -42,7 +48,13 @@ def main() -> None:
     if args.command == "run":
         run_chat(MODELS[args.model])
     elif args.command == "serve":
-        start_server(MODELS[args.model], args.host, args.port, args.idle_seconds)
+        start_server(
+            MODELS[args.model],
+            args.host,
+            args.port,
+            args.idle_seconds,
+            backend=args.backend,
+        )
         print(json.dumps(build_status(), indent=2))
         supervise_foreground()
     elif args.command == "stop":

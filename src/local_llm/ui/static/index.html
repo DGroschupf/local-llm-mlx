@@ -26,6 +26,7 @@
         <div class="actions">
           <button type="button" class="primary" data-start-model="qwen">Start Qwen</button>
           <button type="button" class="primary" data-start-model="devstral">Start Devstral</button>
+          <button type="button" class="primary" data-start-model="devstral" data-backend="agent">Start Devstral Agent</button>
           <button type="button" class="danger" data-action="stop">Stop</button>
         </div>
       </section>
@@ -60,6 +61,14 @@
       <section class="panel stack">
         <h2>Terminal Commands</h2>
         <pre id="commands"></pre>
+      </section>
+
+      <section class="panel stack">
+        <div class="section-header">
+          <h2>Claude Code</h2>
+          <button type="button" data-action="copy-claude">Copy</button>
+        </div>
+        <pre id="claudeCommand"></pre>
       </section>
     </div>
 

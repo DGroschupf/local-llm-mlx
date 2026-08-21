@@ -30,10 +30,24 @@ def build_status() -> dict[str, Any]:
 
 
 def _commands() -> dict[str, dict[str, str]]:
-    return {
-        name: {
+    commands = {}
+    for name, profile in MODELS.items():
+        values = {
             "chat": f"uv run local-llm run {name}",
             "serve": f"uv run local-llm serve {name}",
         }
-        for name in MODELS
-    }
+        if profile.supports_agent:
+            values["serve_agent"] = f"uv run local-llm serve {name} --backend agent"
+            values["claude"] = _claude_command(profile.model)
+        commands[name] = values
+    return commands
+
+
+def _claude_command(model: str) -> str:
+    return (
+        'ANTHROPIC_BASE_URL="http://127.0.0.1:8080" '
+        'ANTHROPIC_AUTH_TOKEN="sk-optiq-local" '
+        f'ANTHROPIC_CUSTOM_MODEL_OPTION="{model}" '
+        'ANTHROPIC_CUSTOM_MODEL_OPTION_NAME="Devstral Local" '
+        f'claude --model "{model}"'
+    )

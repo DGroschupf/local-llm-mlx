@@ -71,6 +71,11 @@ button.danger {
   color: var(--bad);
 }
 
+button.copied {
+  border-color: var(--good);
+  color: var(--good);
+}
+
 button:disabled {
   cursor: progress;
   opacity: .55;

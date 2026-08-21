@@ -10,6 +10,7 @@ It gives you an `ollama`-like command surface for:
 - one active model server at a time
 - idle unloading
 - a local dashboard for starting/stopping models and watching memory pressure
+- Devstral agent mode through `mlx-optiq` for Claude Code
 
 ## Project Structure
 
@@ -54,9 +55,18 @@ uv run local-llm serve qwen
 uv run local-llm serve devstral
 ```
 
+Start Devstral in agent mode with `mlx-optiq`:
+
+```bash
+uv run local-llm serve devstral --backend agent
+```
+
 The supervised server uses `127.0.0.1:8080` by default and unloads after 15 minutes
 of inactivity. It also watches process CPU time, so active generation should refresh
 the idle timer even when a client calls `mlx_lm.server` directly.
+
+In agent mode, `optiq serve` also receives an `--idle-timeout` value so it can
+release the model internally after being idle.
 
 Check status:
 
@@ -94,16 +104,19 @@ The dashboard can:
 
 - start Qwen
 - start Devstral
+- start Devstral Agent through `mlx-optiq`
 - stop the active server
 - show active PID/model/log path
 - show memory pressure, available memory, swap usage, and process RSS
 - estimate whether each model currently looks comfortable, tight, or risky
 - send browser-chat prompts through the running local server
+- copy a Claude Code command for the local Devstral agent server
 
 The current UI is dependency-free static HTML/CSS/JS served by the Python CLI.
 It is intentionally split into separate files so a React/Vite frontend can later
 replace `ui/static/` while keeping the same backend endpoints:
-`/api/status`, `/api/start/{model}`, `/api/stop`, `/api/config`, and `/api/chat`.
+`/api/status`, `/api/start/{model}`, `/api/start/{model}:agent`, `/api/stop`,
+`/api/config`, and `/api/chat`.
 
 ## Model Profiles
 
@@ -115,6 +128,26 @@ replace `ui/static/` while keeping the same backend endpoints:
 `mlx_lm.chat` supports `--max-kv-size`, so the terminal chat command uses the
 profile-specific KV sizes. The installed `mlx_lm.server` does not expose that flag,
 so the server command only passes supported server flags.
+
+## Claude Code With Devstral Agent Mode
+
+Start the local Anthropic-compatible server:
+
+```bash
+uv run local-llm serve devstral --backend agent
+```
+
+Then go to the project where Claude Code should work and paste:
+
+```bash
+ANTHROPIC_BASE_URL="http://127.0.0.1:8080" ANTHROPIC_AUTH_TOKEN="sk-optiq-local" ANTHROPIC_CUSTOM_MODEL_OPTION="mlx-community/Devstral-Small-2-24B-Instruct-2512-OptiQ-4bit" ANTHROPIC_CUSTOM_MODEL_OPTION_NAME="Devstral Local" claude --model "mlx-community/Devstral-Small-2-24B-Instruct-2512-OptiQ-4bit"
+```
+
+The dashboard shows this command in the Claude Code panel and has a copy button.
+
+`ANTHROPIC_BASE_URL` points Claude Code at the local Anthropic-compatible gateway.
+`ANTHROPIC_CUSTOM_MODEL_OPTION` makes the Devstral model selectable as a custom
+model name.
 
 ## Continue / OpenAI-Compatible Clients
 
@@ -135,6 +168,40 @@ or:
 ```text
 mlx-community/Devstral-Small-2-24B-Instruct-2512-OptiQ-4bit
 ```
+
+For Continue, open its `config.yaml` and add:
+
+```yaml
+name: Local MLX
+version: 1.0.0
+schema: v1
+
+models:
+  - name: Qwen Local
+    provider: openai
+    model: keXjos/Qwen3.8-9B-mlx-4Bit
+    apiBase: http://127.0.0.1:8080/v1
+    apiKey: sk-local
+    roles:
+      - chat
+      - edit
+      - apply
+
+  - name: Devstral Local
+    provider: openai
+    model: mlx-community/Devstral-Small-2-24B-Instruct-2512-OptiQ-4bit
+    apiBase: http://127.0.0.1:8080/v1
+    apiKey: sk-local
+    roles:
+      - chat
+      - edit
+      - apply
+    capabilities:
+      - tool_use
+```
+
+Use `uv run local-llm serve qwen` before selecting Qwen in Continue, or
+`uv run local-llm serve devstral --backend agent` before selecting Devstral.
 
 ## Notes
 

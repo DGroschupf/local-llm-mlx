@@ -33,11 +33,19 @@ def start_server(
     host: str = "127.0.0.1",
     port: int = 8080,
     idle_seconds: int = DEFAULT_IDLE_SECONDS,
+    backend: str = "mlx",
 ) -> dict[str, Any]:
+    if backend == "agent" and not profile.supports_agent:
+        raise ValueError(f"{profile.name} does not have an agent backend configured")
+
     with state_lock:
         state = load_state()
         if is_pid_alive(state.get("pid")):
-            same_model = state.get("model_name") == profile.name and state.get("port") == port
+            same_model = (
+                state.get("model_name") == profile.name
+                and state.get("port") == port
+                and state.get("backend") == backend
+            )
             if same_model:
                 touch_state(state)
                 save_state(state)
@@ -47,19 +55,7 @@ def start_server(
         ensure_app_dirs()
         log_path = LOG_DIR / f"{profile.name}-{int(time.time())}.log"
         log_file = log_path.open("ab")
-        cmd = [
-            sys.executable,
-            "-m",
-            profile.server_module,
-            "--model",
-            profile.model,
-            "--host",
-            host,
-            "--port",
-            str(port),
-            "--max-tokens",
-            str(profile.max_tokens),
-        ]
+        cmd = _server_command(profile, host, port, idle_seconds, backend)
         process = subprocess.Popen(
             cmd,
             stdout=log_file,
@@ -71,6 +67,7 @@ def start_server(
             "pid": process.pid,
             "model_name": profile.name,
             "model": profile.model,
+            "backend": backend,
             "host": host,
             "port": port,
             "started_at": time.time(),
@@ -82,6 +79,46 @@ def start_server(
         }
         save_state(state)
         return state
+
+
+def _server_command(
+    profile: ModelProfile,
+    host: str,
+    port: int,
+    idle_seconds: int,
+    backend: str,
+) -> list[str]:
+    if backend == "agent":
+        return [
+            "optiq",
+            "serve",
+            "--model",
+            profile.model,
+            "--host",
+            host,
+            "--port",
+            str(port),
+            "--max-tokens",
+            str(profile.max_tokens),
+            "--idle-timeout",
+            str(idle_seconds),
+            "--max-concurrent",
+            "1",
+        ]
+
+    return [
+        sys.executable,
+        "-m",
+        profile.server_module,
+        "--model",
+        profile.model,
+        "--host",
+        host,
+        "--port",
+        str(port),
+        "--max-tokens",
+        str(profile.max_tokens),
+    ]
 
 
 def stop_server() -> bool:

@@ -80,13 +80,22 @@ def _make_handler(
 
         def do_POST(self) -> None:
             if self.path.startswith("/api/start/"):
-                model_name = self.path.rsplit("/", 1)[-1]
+                model_name, backend = self._start_target()
                 profile = MODELS.get(model_name)
                 if profile is None:
                     self.send_error(404, "Unknown model")
                     return
 
-                state = start_server(profile, port=server_port, idle_seconds=idle_seconds)
+                try:
+                    state = start_server(
+                        profile,
+                        port=server_port,
+                        idle_seconds=idle_seconds,
+                        backend=backend,
+                    )
+                except ValueError as exc:
+                    self.send_error(400, str(exc))
+                    return
                 self._send_json({"ok": True, "state": state})
             elif self.path == "/api/stop":
                 self._send_json({"ok": True, "stopped": stop_server()})
@@ -146,6 +155,13 @@ def _make_handler(
             if length == 0:
                 return {}
             return json.loads(self.rfile.read(length).decode("utf-8"))
+
+        def _start_target(self) -> tuple[str, str]:
+            target = self.path.rsplit("/", 1)[-1]
+            if ":" not in target:
+                return target, "mlx"
+            model_name, backend = target.split(":", 1)
+            return model_name, backend
 
         def _send_static(self, filename: str) -> None:
             path = STATIC_DIR / filename

@@ -12,6 +12,7 @@ class ModelProfile:
     chat_kv_size: int
     max_tokens: int
     server_module: str = "mlx_lm.server"
+    supports_agent: bool = False
 
 
 MODELS: dict[str, ModelProfile] = {
@@ -30,6 +31,7 @@ MODELS: dict[str, ModelProfile] = {
         size_gb=15.4,
         chat_kv_size=16384,
         max_tokens=2048,
+        supports_agent=True,
     ),
 }
 

@@ -9,9 +9,12 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelector("[data-action='stop']").addEventListener("click", stopModel);
   document.querySelector("[data-action='send']").addEventListener("click", sendPrompt);
   document.querySelector("[data-action='clear']").addEventListener("click", clearPrompt);
+  document.querySelector("[data-action='copy-claude']").addEventListener("click", copyClaudeCommand);
 
   document.querySelectorAll("[data-start-model]").forEach((button) => {
-    button.addEventListener("click", () => startModel(button.dataset.startModel));
+    button.addEventListener("click", () => {
+      startModel(button.dataset.startModel, button.dataset.backend || "mlx");
+    });
   });
 
   configureRefresh().then(refresh);
@@ -41,14 +44,14 @@ async function refresh() {
   renderStatus(status);
 }
 
-async function startModel(name) {
+async function startModel(name, backend) {
   if (state.busy) {
     return;
   }
   state.busy = true;
   setButtonsDisabled(true);
   try {
-    await api(`/api/start/${name}`, { method: "POST" });
+    await api(`/api/start/${name}:${backend}`, { method: "POST" });
     await refresh();
   } finally {
     state.busy = false;
@@ -125,6 +128,7 @@ function renderStatus(status) {
 
   document.getElementById("fit").replaceChildren(...fitCards(status.fit.models));
   document.getElementById("commands").textContent = commandText(status.commands);
+  document.getElementById("claudeCommand").textContent = claudeCommand(status);
 }
 
 function fitCards(models) {
@@ -154,8 +158,37 @@ function fitCards(models) {
 
 function commandText(commands) {
   return Object.entries(commands)
-    .map(([name, values]) => `${name}\n  ${values.chat}\n  ${values.serve}`)
+    .map(([name, values]) => {
+      const lines = [`${name}`, `  ${values.chat}`, `  ${values.serve}`];
+      if (values.serve_agent) {
+        lines.push(`  ${values.serve_agent}`);
+      }
+      return lines.join("\n");
+    })
     .join("\n\n");
+}
+
+function claudeCommand(status) {
+  const active = status.state || {};
+  const activeModel = active.model_name;
+  if (activeModel && status.commands[activeModel]?.claude) {
+    return status.commands[activeModel].claude;
+  }
+  return status.commands.devstral?.claude || "";
+}
+
+async function copyClaudeCommand(event) {
+  const command = document.getElementById("claudeCommand").textContent.trim();
+  if (!command) {
+    return;
+  }
+  await navigator.clipboard.writeText(command);
+  event.target.classList.add("copied");
+  event.target.textContent = "Copied";
+  setTimeout(() => {
+    event.target.classList.remove("copied");
+    event.target.textContent = "Copy";
+  }, 1400);
 }
 
 function formatGb(value) {
