@@ -233,7 +233,7 @@ def _make_handler(
                         profile,
                         port=server_port,
                         idle_seconds=idle_seconds,
-                        backend="mlx",
+                        backend="agent" if profile.supports_agent else "mlx",
                     )
                 except ValueError as exc:
                     self.send_error(400, str(exc))
@@ -250,6 +250,10 @@ def _make_handler(
                         with urllib.request.urlopen(req, timeout=1):
                             ready = True
                             break
+                    except urllib.error.HTTPError:
+                        # Server is up and speaking HTTP, even if it returned 404/401
+                        ready = True
+                        break
                     except Exception:
                         time.sleep(1)
 
