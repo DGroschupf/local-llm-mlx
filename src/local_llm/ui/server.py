@@ -241,7 +241,7 @@ def _make_handler(
 
                 url = f"http://{state.get('host', '127.0.0.1')}:{state.get('port', 8080)}/v1/models"
                 ready = False
-                for _ in range(30):
+                for _ in range(60):
                     try:
                         req = urllib.request.Request(
                             url,
@@ -291,11 +291,11 @@ def _make_handler(
                     self.end_headers()
 
                     while True:
-                        chunk = response.read(8192)
-                        if not chunk:
+                        line = response.readline()
+                        if not line:
                             break
                         try:
-                            self.wfile.write(chunk)
+                            self.wfile.write(line)
                             self.wfile.flush()
                         except (BrokenPipeError, ConnectionResetError):
                             break
