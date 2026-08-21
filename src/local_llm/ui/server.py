@@ -9,13 +9,21 @@ from pathlib import Path
 from threading import Thread
 from typing import Any
 
-from local_llm.config import DEFAULT_IDLE_SECONDS, DEFAULT_SUPERVISOR_TICK_SECONDS, DEFAULT_UI_REFRESH_SECONDS
+from local_llm.config import (
+    DEFAULT_IDLE_SECONDS,
+    DEFAULT_SUPERVISOR_TICK_SECONDS,
+    DEFAULT_UI_REFRESH_SECONDS,
+)
 from local_llm.models import MODELS, model_payload
 from local_llm.processes import is_pid_alive
 from local_llm.state import load_state, save_state, state_lock
 from local_llm.status import build_status
-from local_llm.supervisor import idle_monitor_loop, mark_activity, start_server, stop_server
-
+from local_llm.supervisor import (
+    idle_monitor_loop,
+    mark_activity,
+    start_server,
+    stop_server,
+)
 
 STATIC_DIR = Path(__file__).parent / "static"
 CONTENT_TYPES = {
@@ -41,7 +49,9 @@ def run_ui(
             refresh_seconds=refresh_seconds,
         ),
     )
-    monitor = Thread(target=idle_monitor_loop, args=(monitor_tick_seconds,), daemon=True)
+    monitor = Thread(
+        target=idle_monitor_loop, args=(monitor_tick_seconds,), daemon=True
+    )
     monitor.start()
 
     url = f"http://{host}:{port}"
@@ -99,6 +109,10 @@ def _make_handler(
                 self._send_json({"ok": True, "state": state})
             elif self.path == "/api/stop":
                 self._send_json({"ok": True, "stopped": stop_server()})
+            elif self.path == "/api/shutdown":
+                stop_server()
+                self._send_json({"ok": True})
+                Thread(target=self.server.shutdown, daemon=True).start()
             elif self.path == "/api/touch":
                 mark_activity()
                 self._send_json({"ok": True})
@@ -151,7 +165,7 @@ def _make_handler(
                     self.send_header("Content-Type", "text/event-stream")
                     self.send_header("Cache-Control", "no-cache")
                     self.end_headers()
-                    
+
                     while True:
                         line = response.readline()
                         if not line:
@@ -184,7 +198,10 @@ def _make_handler(
                 return
 
             self.send_response(200)
-            self.send_header("Content-Type", CONTENT_TYPES.get(path.suffix, "application/octet-stream"))
+            self.send_header(
+                "Content-Type",
+                CONTENT_TYPES.get(path.suffix, "application/octet-stream"),
+            )
             self.send_header("Content-Length", str(len(encoded)))
             self.end_headers()
             self.wfile.write(encoded)

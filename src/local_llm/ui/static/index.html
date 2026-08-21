@@ -3,87 +3,143 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>local-llm</title>
+  <title>Local LLM Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/app.css">
 </head>
 <body>
-  <header class="topbar">
-    <div>
-      <h1>local-llm</h1>
-      <p>MLX runner for Qwen and Devstral</p>
+  <div class="glass-bg"></div>
+  <header class="topbar glass-panel">
+    <div class="brand">
+      <div class="logo-icon">✨</div>
+      <div>
+        <h1>Local LLM</h1>
+        <p>MLX Engine &middot; Qwen &amp; Devstral</p>
+      </div>
+    </div>
+    <div class="status-indicator">
+      <span class="pulse"></span>
+      <span id="activePill" class="pill">Idle</span>
     </div>
   </header>
 
   <main class="layout">
     <div class="left-column">
-      <section class="panel stack">
+      
+      <section class="panel glass-panel stack">
         <div class="section-header">
-          <h2>Server</h2>
-          <span id="activePill" class="pill">Loading</span>
+          <h2><span class="icon">🚀</span> Server Control</h2>
         </div>
-        <p id="serverText" class="muted"></p>
-        <div class="actions">
-          <button type="button" class="primary" data-start-model="qwen">Start Qwen</button>
-          <button type="button" class="primary" data-start-model="qwen" data-backend="agent">Start Qwen Agent</button>
-          <button type="button" class="primary" data-start-model="devstral">Start Devstral</button>
-          <button type="button" class="primary" data-start-model="devstral" data-backend="agent">Start Devstral Agent</button>
-          <button type="button" class="danger" data-action="stop">Stop</button>
+        <p id="serverText" class="server-status muted">No model server loaded.</p>
+        
+        <div class="model-group">
+          <h3>Qwen3.8-9B</h3>
+          <div class="actions">
+            <button type="button" class="primary btn-glow" data-start-model="qwen">Chat</button>
+            <button type="button" class="secondary" data-start-model="qwen" data-backend="agent">Agent API</button>
+          </div>
+        </div>
+        
+        <div class="model-group">
+          <h3>Devstral Small 2 24B</h3>
+          <div class="actions">
+            <button type="button" class="primary btn-glow" data-start-model="devstral">Chat</button>
+            <button type="button" class="secondary" data-start-model="devstral" data-backend="agent">Agent API</button>
+          </div>
+        </div>
+
+        <div class="actions stop-action">
+          <button type="button" class="secondary full-width" data-action="stop" style="margin-bottom: 0.5rem;">
+            <span class="icon">⏹</span> Stop Model
+          </button>
+          <button type="button" class="danger full-width" data-action="shutdown">
+            <span class="icon">⏻</span> Quit UI & Server
+          </button>
         </div>
       </section>
 
-      <section class="panel stack">
-        <h2>Memory</h2>
+      <section class="panel glass-panel stack">
+        <div class="section-header">
+          <h2><span class="icon">📊</span> Resources & Fit</h2>
+        </div>
         <div class="metrics">
-          <div>
+          <div class="metric-card">
             <span>Pressure</span>
             <strong id="pressure">-</strong>
           </div>
-          <div>
+          <div class="metric-card">
             <span>Process RSS</span>
             <strong id="rss">-</strong>
           </div>
-          <div>
+          <div class="metric-card">
             <span>Available</span>
             <strong id="available">-</strong>
           </div>
-          <div>
+          <div class="metric-card">
             <span>Swap Used</span>
             <strong id="swap">-</strong>
           </div>
         </div>
+        <div id="fit" class="fit-list mt-3"></div>
       </section>
 
-      <section class="panel stack">
-        <h2>Model Fit</h2>
-        <div id="fit" class="fit-list"></div>
-      </section>
+    </div>
 
-      <section class="panel stack">
-        <h2>Terminal Commands</h2>
-        <pre id="commands"></pre>
-      </section>
-
-      <section class="panel stack">
+    <div class="right-column stack">
+      <section class="panel glass-panel stack chat-panel">
         <div class="section-header">
-          <h2>Claude Code</h2>
-          <button type="button" data-action="copy-claude">Copy</button>
+          <h2><span class="icon">💬</span> Playground</h2>
+          <span id="refreshText" class="muted text-small"></span>
         </div>
-        <pre id="claudeCommand"></pre>
+        <div class="chat-container">
+          <pre id="answer" class="chat-output">(empty response)</pre>
+          <div class="chat-input-area">
+            <textarea id="prompt" placeholder="Ask the active local model something..."></textarea>
+            <div class="actions row-actions">
+              <button type="button" class="primary" data-action="send">Send</button>
+              <button type="button" class="secondary" data-action="clear">Clear</button>
+            </div>
+          </div>
+        </div>
       </section>
     </div>
 
-    <section class="panel stack chat-panel">
-      <div class="section-header">
-        <h2>Browser Chat</h2>
-        <span id="refreshText" class="muted"></span>
-      </div>
-      <textarea id="prompt" placeholder="Ask the active local model something..."></textarea>
-      <div class="actions">
-        <button type="button" class="primary" data-action="send">Send</button>
-        <button type="button" data-action="clear">Clear</button>
-      </div>
-      <pre id="answer"></pre>
-    </section>
+    <div class="bottom-row">
+      <section class="panel glass-panel stack integrations-panel">
+        <div class="section-header">
+          <h2><span class="icon">🔌</span> Integrations</h2>
+        </div>
+        
+        <div class="integration-grid">
+          <div class="integration-card">
+            <div class="integration-header">
+              <h3>Claude CLI</h3>
+              <button type="button" class="copy-btn" data-action="copy-claude">Copy snippet</button>
+            </div>
+            <p class="muted text-small">Start the Claude engineering agent connected to your local model.</p>
+            <pre id="claudeCommand" class="code-block"></pre>
+          </div>
+
+          <div class="integration-card">
+            <div class="integration-header">
+              <h3>Continue.dev</h3>
+              <button type="button" class="copy-btn" data-action="copy-continue">Copy snippet</button>
+            </div>
+            <p class="muted text-small">Add this to your <code>config.json</code> to use the model in VS Code.</p>
+            <pre id="continueCommand" class="code-block"></pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel glass-panel stack terminal-panel">
+        <div class="section-header">
+          <h2><span class="icon">⌨️</span> Terminal Commands</h2>
+        </div>
+        <pre id="commands" class="code-block commands-block"></pre>
+      </section>
+    </div>
   </main>
 
   <script src="/app.js" defer></script>

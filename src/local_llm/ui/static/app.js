@@ -6,9 +6,11 @@ const state = {
 
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelector("[data-action='stop']").addEventListener("click", stopModel);
+  document.querySelector("[data-action='shutdown']").addEventListener("click", shutdownServer);
   document.querySelector("[data-action='send']").addEventListener("click", sendPrompt);
   document.querySelector("[data-action='clear']").addEventListener("click", clearPrompt);
   document.querySelector("[data-action='copy-claude']").addEventListener("click", copyClaudeCommand);
+  document.querySelector("[data-action='copy-continue']").addEventListener("click", copyContinueCommand);
 
   document.querySelectorAll("[data-start-model]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -68,6 +70,23 @@ async function stopModel() {
     await api("/api/stop", { method: "POST" });
     await refresh();
   } finally {
+    state.busy = false;
+    setButtonsDisabled(false);
+  }
+}
+
+async function shutdownServer() {
+  if (state.busy) {
+    return;
+  }
+  state.busy = true;
+  setButtonsDisabled(true);
+  clearInterval(state.timerId);
+  try {
+    await api("/api/shutdown", { method: "POST" });
+    document.body.innerHTML = "<div style='display:flex;align-items:center;justify-content:center;height:100vh;color:#fff;font-family:ui-sans-serif,system-ui,sans-serif;'><h2>Server and UI have been shut down. You can close this tab.</h2></div>";
+  } catch (err) {
+    alert("Failed to shutdown server: " + err.message);
     state.busy = false;
     setButtonsDisabled(false);
   }
@@ -148,6 +167,11 @@ function renderStatus(status) {
   pill.textContent = active ? serverState.model_name : "Idle";
   pill.className = `pill ${active ? "green" : ""}`;
 
+  const pulse = document.querySelector(".pulse");
+  if (pulse) {
+    pulse.className = `pulse ${active ? "active" : ""}`;
+  }
+
   document.getElementById("serverText").textContent = active
     ? `${serverState.model} on ${serverState.host}:${serverState.port} | PID ${serverState.pid}`
     : "No model server loaded.";
@@ -163,6 +187,7 @@ function renderStatus(status) {
   document.getElementById("fit").replaceChildren(...fitCards(status.fit.models));
   document.getElementById("commands").textContent = commandText(status.commands);
   document.getElementById("claudeCommand").textContent = claudeCommand(status);
+  document.getElementById("continueCommand").textContent = continueCommand(status);
 }
 
 function fitCards(models) {
@@ -211,17 +236,49 @@ function claudeCommand(status) {
   return status.commands.devstral?.claude || "";
 }
 
+function continueCommand(status) {
+  const active = status.state || {};
+  const activeModel = active.model_name || "qwen";
+  let modelStr = "keXjos/Qwen3.8-9B-mlx-4Bit";
+  if (active.model) {
+    modelStr = active.model;
+  } else if (activeModel === "devstral") {
+    modelStr = "mlx-community/Devstral-Small-2-24B-Instruct-2512-OptiQ-4bit";
+  }
+  
+  return `{
+  "models": [
+    {
+      "title": "Local ${activeModel}",
+      "provider": "openai",
+      "model": "${modelStr}",
+      "apiBase": "http://127.0.0.1:8080/v1"
+    }
+  ]
+}`;
+}
+
 async function copyClaudeCommand(event) {
   const command = document.getElementById("claudeCommand").textContent.trim();
-  if (!command) {
-    return;
-  }
+  if (!command) return;
   await navigator.clipboard.writeText(command);
   event.target.classList.add("copied");
-  event.target.textContent = "Copied";
+  event.target.textContent = "Copied!";
   setTimeout(() => {
     event.target.classList.remove("copied");
-    event.target.textContent = "Copy";
+    event.target.textContent = "Copy snippet";
+  }, 1400);
+}
+
+async function copyContinueCommand(event) {
+  const command = document.getElementById("continueCommand").textContent.trim();
+  if (!command) return;
+  await navigator.clipboard.writeText(command);
+  event.target.classList.add("copied");
+  event.target.textContent = "Copied!";
+  setTimeout(() => {
+    event.target.classList.remove("copied");
+    event.target.textContent = "Copy snippet";
   }, 1400);
 }
 
