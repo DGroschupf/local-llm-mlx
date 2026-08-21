@@ -176,6 +176,8 @@ function renderStatus(status) {
   const serverState = status.state || {};
   const memory = status.memory || {};
   const active = Boolean(status.active);
+  const activeModel = serverState.model_name;
+  const activeBackend = serverState.backend || "mlx";
   state.active = active;
   
   if (!state.busy) {
@@ -186,8 +188,20 @@ function renderStatus(status) {
   }
 
   const pill = document.getElementById("activePill");
-  pill.textContent = active ? serverState.model_name : "Idle";
+  pill.textContent = active ? `${serverState.model_name} · ${backendLabel(activeBackend)}` : "Idle";
   pill.className = `pill ${active ? "green" : ""}`;
+
+  document.querySelectorAll("[data-start-model]").forEach((button) => {
+    if (!button.dataset.label) {
+      button.dataset.label = button.textContent;
+    }
+    const isActive = active
+      && button.dataset.startModel === activeModel
+      && (button.dataset.backend || "mlx") === activeBackend;
+    button.classList.toggle("active-model", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+    button.textContent = isActive ? `${button.dataset.label} · Running` : button.dataset.label;
+  });
 
   const pulse = document.querySelector(".pulse");
   if (pulse) {
@@ -211,6 +225,10 @@ function renderStatus(status) {
   document.getElementById("commands").textContent = commandText(status.commands);
   document.getElementById("claudeCommand").textContent = claudeCommand(status);
   document.getElementById("continueCommand").textContent = continueCommand(status);
+}
+
+function backendLabel(backend) {
+  return backend === "agent" ? "Agent API" : "Chat";
 }
 
 function fitCards(models) {

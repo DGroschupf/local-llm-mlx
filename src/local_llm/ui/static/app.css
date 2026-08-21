@@ -93,6 +93,24 @@ button.primary:hover:not(:disabled) {
   box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
 }
 
+button.active-model {
+  border-color: var(--good);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.22), 0 4px 15px rgba(16, 185, 129, 0.2);
+  position: relative;
+}
+button.active-model::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--good);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
+}
+button.primary.active-model {
+  background: var(--good);
+  color: white;
+}
+
 button.danger {
   color: var(--bad);
   border-color: rgba(239, 68, 68, 0.3);
