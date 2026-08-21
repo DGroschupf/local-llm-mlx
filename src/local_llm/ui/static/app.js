@@ -1,6 +1,6 @@
 const state = {
   busy: false,
-  refreshMs: 60000,
+  refreshMs: 3000,
   timerId: null,
 };
 
@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function configureRefresh() {
   const config = await api("/api/config");
-  state.refreshMs = Math.max(15, Number(config.refresh_seconds || 60)) * 1000;
+  state.refreshMs = Math.max(1, Number(config.refresh_seconds || 3)) * 1000;
   document.getElementById("refreshText").textContent = `updates every ${state.refreshMs / 1000}s`;
 
   if (state.timerId) {
