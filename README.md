@@ -38,7 +38,7 @@ src/local_llm/
 This project uses [uv](https://docs.astral.sh/uv/) for fast dependency management. If you don't have it installed yet:
 
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
+brew install uv
 ```
 
 Sync the dependencies (this creates a `.venv` and installs the required `mlx-lm` and `mlx-optiq` packages):
