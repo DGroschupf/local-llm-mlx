@@ -339,6 +339,7 @@ def _make_handler(
                         if not line:
                             break
                         try:
+                            line = self._normalize_sse_line(line)
                             if is_chunked:
                                 self.wfile.write(f"{len(line):X}\r\n".encode("ascii"))
                                 self.wfile.write(line)
@@ -367,6 +368,21 @@ def _make_handler(
                     pass
             except urllib.error.URLError as exc:
                 self.send_error(502, f"Model server proxy error: {exc}")
+
+        @staticmethod
+        def _normalize_sse_line(line: bytes) -> bytes:
+            if not line.startswith(b"data: ") or line.strip() == b"data: [DONE]":
+                return line
+            try:
+                payload = json.loads(line[6:])
+            except json.JSONDecodeError:
+                return line
+
+            for choice in payload.get("choices", []):
+                delta = choice.get("delta", {})
+                if "reasoning" in delta and "reasoning_content" not in delta:
+                    delta["reasoning_content"] = delta.pop("reasoning")
+            return f"data: {json.dumps(payload)}\n".encode("utf-8")
 
         def _read_json(self) -> dict[str, Any]:
             length = int(self.headers.get("Content-Length", "0"))
