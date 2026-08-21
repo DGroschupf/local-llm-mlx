@@ -85,12 +85,47 @@ async function sendPrompt() {
   answer.textContent = "Thinking...";
 
   try {
-    const data = await api("/api/chat", {
+    const response = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt }),
     });
-    answer.textContent = data.content || "(empty response)";
+    
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    answer.textContent = "";
+
+    let buffer = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop(); // keep the last partial line in the buffer
+      
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          const dataStr = line.slice(6).trim();
+          if (dataStr === "[DONE]") continue;
+          try {
+            const data = JSON.parse(dataStr);
+            const content = data.choices?.[0]?.delta?.content || "";
+            answer.textContent += content;
+          } catch (e) {
+            console.error("Failed to parse SSE data:", dataStr, e);
+          }
+        }
+      }
+    }
+    
+    if (!answer.textContent) {
+      answer.textContent = "(empty response)";
+    }
     await refresh();
   } catch (error) {
     answer.textContent = error.message;

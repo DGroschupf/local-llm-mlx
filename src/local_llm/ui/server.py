@@ -113,6 +113,11 @@ def _make_handler(
                 self.send_error(409, "No model server is running")
                 return
 
+            profile = MODELS.get(state.get("model_name"))
+            if profile is None:
+                self.send_error(409, "Active model is not configured")
+                return
+
             body = self._read_json()
             prompt = str(body.get("prompt", "")).strip()
             if not prompt:
@@ -128,9 +133,9 @@ def _make_handler(
             payload = {
                 "model": state.get("model"),
                 "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": 1024,
+                "max_tokens": profile.max_tokens,
                 "temperature": 0,
-                "stream": False,
+                "stream": True,
             }
             url = f"http://{state.get('host', '127.0.0.1')}:{state.get('port', 8080)}/v1/chat/completions"
 
@@ -142,13 +147,20 @@ def _make_handler(
                     method="POST",
                 )
                 with urllib.request.urlopen(request, timeout=600) as response:
-                    data = json.loads(response.read().decode("utf-8"))
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/event-stream")
+                    self.send_header("Cache-Control", "no-cache")
+                    self.end_headers()
+                    
+                    while True:
+                        line = response.readline()
+                        if not line:
+                            break
+                        self.wfile.write(line)
+                        self.wfile.flush()
             except urllib.error.URLError as exc:
                 self.send_error(502, f"Model server is not ready: {exc}")
                 return
-
-            content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-            self._send_json({"ok": True, "content": content, "raw": data})
 
         def _read_json(self) -> dict[str, Any]:
             length = int(self.headers.get("Content-Length", "0"))
