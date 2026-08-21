@@ -2,6 +2,7 @@ const state = {
   busy: false,
   refreshMs: 1000,
   timerId: null,
+  active: false,
 };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -64,12 +65,23 @@ async function stopModel() {
   if (state.busy) {
     return;
   }
+  
+  const stopBtn = document.querySelector("[data-action='stop']");
+  const originalHtml = stopBtn.innerHTML;
+  stopBtn.innerHTML = '<span class="icon">⏹</span> Stopping...';
+  
   state.busy = true;
   setButtonsDisabled(true);
   try {
     await api("/api/stop", { method: "POST" });
+    stopBtn.innerHTML = '<span class="icon">✓</span> Stopped!';
+    stopBtn.classList.add("copied");
     await refresh();
   } finally {
+    setTimeout(() => {
+      stopBtn.innerHTML = originalHtml;
+      stopBtn.classList.remove("copied");
+    }, 1400);
     state.busy = false;
     setButtonsDisabled(false);
   }
@@ -162,6 +174,14 @@ function renderStatus(status) {
   const serverState = status.state || {};
   const memory = status.memory || {};
   const active = Boolean(status.active);
+  state.active = active;
+  
+  if (!state.busy) {
+    const stopModelBtn = document.querySelector("[data-action='stop']");
+    if (stopModelBtn) {
+      stopModelBtn.disabled = !active;
+    }
+  }
 
   const pill = document.getElementById("activePill");
   pill.textContent = active ? serverState.model_name : "Idle";
@@ -293,4 +313,10 @@ function setButtonsDisabled(disabled) {
   document.querySelectorAll("button").forEach((button) => {
     button.disabled = disabled;
   });
+  if (!disabled) {
+    const stopModelBtn = document.querySelector("[data-action='stop']");
+    if (stopModelBtn) {
+      stopModelBtn.disabled = !state.active;
+    }
+  }
 }

@@ -118,6 +118,8 @@ def _server_command(
         str(port),
         "--max-tokens",
         str(profile.max_tokens),
+        "--prompt-cache-bytes",
+        str(profile.server_cache_bytes),
     ]
 
 

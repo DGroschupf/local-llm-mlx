@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 
+_GIB = 1024**3
+
 
 @dataclass(frozen=True)
 class ModelProfile:
@@ -11,6 +13,7 @@ class ModelProfile:
     size_gb: float
     chat_kv_size: int
     max_tokens: int
+    server_cache_bytes: int = 4 * _GIB
     server_module: str = "mlx_lm.server"
     supports_agent: bool = False
 
@@ -23,6 +26,7 @@ MODELS: dict[str, ModelProfile] = {
         size_gb=5.04,
         chat_kv_size=32768,
         max_tokens=2048,
+        server_cache_bytes=8 * _GIB,
         supports_agent=True,
     ),
     "devstral": ModelProfile(
@@ -32,6 +36,7 @@ MODELS: dict[str, ModelProfile] = {
         size_gb=15.4,
         chat_kv_size=16384,
         max_tokens=2048,
+        server_cache_bytes=2 * _GIB,
         supports_agent=True,
     ),
 }
