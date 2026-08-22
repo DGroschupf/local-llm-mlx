@@ -147,7 +147,10 @@
           <div class="integration-card">
             <div class="integration-header">
               <h3>Claude CLI</h3>
-              <button type="button" class="copy-btn" data-action="copy-claude">Copy snippet</button>
+              <div class="row-actions">
+                <select id="claudeModelSelect" class="model-select"></select>
+                <button type="button" class="copy-btn" data-action="copy-claude">Copy snippet</button>
+              </div>
             </div>
             <p class="muted text-small">Start the Claude engineering agent connected to your local model.</p>
             <pre id="claudeCommand" class="code-block"></pre>
@@ -156,7 +159,10 @@
           <div class="integration-card">
             <div class="integration-header">
               <h3>Continue.dev</h3>
-              <button type="button" class="copy-btn" data-action="copy-continue">Copy snippet</button>
+              <div class="row-actions">
+                <select id="continueModelSelect" class="model-select"></select>
+                <button type="button" class="copy-btn" data-action="copy-continue">Copy snippet</button>
+              </div>
             </div>
             <p class="muted text-small">Add this to your <code>config.json</code> to use the model in VS Code.</p>
             <pre id="continueCommand" class="code-block"></pre>

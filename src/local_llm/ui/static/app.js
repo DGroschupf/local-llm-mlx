@@ -3,6 +3,9 @@ const state = {
   refreshMs: 1000,
   timerId: null,
   active: false,
+  lastStatus: null,
+  claudeModel: null,
+  continueModel: null,
 };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -12,6 +15,15 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelector("[data-action='clear']").addEventListener("click", clearPrompt);
   document.querySelector("[data-action='copy-claude']").addEventListener("click", copyClaudeCommand);
   document.querySelector("[data-action='copy-continue']").addEventListener("click", copyContinueCommand);
+
+  document.getElementById("claudeModelSelect").addEventListener("change", (event) => {
+    state.claudeModel = event.target.value;
+    if (state.lastStatus) renderSnippets(state.lastStatus);
+  });
+  document.getElementById("continueModelSelect").addEventListener("change", (event) => {
+    state.continueModel = event.target.value;
+    if (state.lastStatus) renderSnippets(state.lastStatus);
+  });
 
   document.querySelectorAll("[data-start-model]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -227,8 +239,42 @@ function renderStatus(status) {
 
   document.getElementById("fit").replaceChildren(...fitCards(status.fit.models));
   document.getElementById("commands").textContent = commandText(status.commands);
-  document.getElementById("claudeCommand").textContent = claudeCommand(status);
-  document.getElementById("continueCommand").textContent = continueCommand(status);
+
+  state.lastStatus = status;
+  renderSnippets(status);
+}
+
+function renderSnippets(status) {
+  const activeModel = (status.state || {}).model_name;
+
+  const claudeCapable = Object.keys(status.commands).filter((name) => status.commands[name]?.claude);
+  populateModelSelect("claudeModelSelect", claudeCapable, status.models, "claudeModel", activeModel);
+
+  const allModels = Object.keys(status.commands);
+  populateModelSelect("continueModelSelect", allModels, status.models, "continueModel", activeModel);
+
+  document.getElementById("claudeCommand").textContent = claudeCommand(status, state.claudeModel);
+  document.getElementById("continueCommand").textContent = continueCommand(status, state.continueModel);
+}
+
+function populateModelSelect(selectId, names, models, stateKey, activeModel) {
+  const select = document.getElementById(selectId);
+  const existing = Array.from(select.options).map((option) => option.value);
+  const sameOptions = existing.length === names.length && existing.every((value) => names.includes(value));
+
+  if (!sameOptions) {
+    select.replaceChildren(...names.map((name) => {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = models[name]?.role ? `${name} — ${models[name].role}` : name;
+      return option;
+    }));
+  }
+
+  if (!names.includes(state[stateKey])) {
+    state[stateKey] = names.includes(activeModel) ? activeModel : names[0];
+  }
+  select.value = state[stateKey] || "";
 }
 
 function backendLabel(backend) {
@@ -362,40 +408,27 @@ function commandText(commands) {
     .join("\n\n");
 }
 
-function claudeCommand(status) {
-  const active = status.state || {};
-  const activeModel = active.model_name;
-  if (activeModel && status.commands[activeModel]?.claude) {
-    return status.commands[activeModel].claude;
-  }
-  return status.commands.devstral?.claude || "";
+function claudeCommand(status, modelName) {
+  return status.commands[modelName]?.claude || "";
 }
 
-function continueCommand(status) {
+function continueCommand(status, modelName) {
+  const profile = status.models[modelName];
+  if (!profile) return "";
+
+  const title = `${profile.role || modelName} Local`;
+
   return `{
   "models": [
     {
-      "title": "Qwen Local",
+      "title": ${JSON.stringify(title)},
       "provider": "openai",
-      "model": "keXjos/Qwen3.8-9B-mlx-4Bit",
-      "apiBase": "http://127.0.0.1:5177/v1",
+      "model": ${JSON.stringify(profile.model)},
+      "apiBase": "http://127.0.0.1:8080/v1",
       "apiKey": "sk-optiq-local",
-      "contextLength": 32768,
+      "contextLength": ${profile.chat_kv_size},
       "completionOptions": {
-        "maxTokens": 2048
-      },
-      "roles": ["chat", "edit", "apply"],
-      "capabilities": ["tool_use"]
-    },
-    {
-      "title": "Devstral Local",
-      "provider": "openai",
-      "model": "mlx-community/Devstral-Small-2-24B-Instruct-2512-OptiQ-4bit",
-      "apiBase": "http://127.0.0.1:5177/v1",
-      "apiKey": "sk-optiq-local",
-      "contextLength": 16384,
-      "completionOptions": {
-        "maxTokens": 2048
+        "maxTokens": ${profile.max_tokens}
       },
       "roles": ["chat", "edit", "apply"],
       "capabilities": ["tool_use"]

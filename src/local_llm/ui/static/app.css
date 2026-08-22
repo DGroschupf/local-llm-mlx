@@ -337,8 +337,20 @@ textarea:focus {
 @media (prefers-color-scheme: light) {
   .integration-card { background: rgba(255,255,255,0.3); }
 }
-.integration-header { display: flex; justify-content: space-between; align-items: center; }
+.integration-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.integration-header .row-actions { display: flex; align-items: center; gap: 8px; }
 .copy-btn { font-size: 12px; min-height: 28px; padding: 0 10px; }
+.model-select {
+  min-height: 28px;
+  font-size: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--glass-bg);
+  color: var(--ink);
+  padding: 0 8px;
+  font-family: inherit;
+  max-width: 160px;
+}
 
 .mt-3 { margin-top: 16px; }
 
