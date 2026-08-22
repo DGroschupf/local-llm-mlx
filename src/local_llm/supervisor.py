@@ -160,6 +160,7 @@ def idle_monitor_tick() -> None:
 
         if is_pid_alive(pid):
             _refresh_activity_from_cpu(state, pid)
+            _refresh_activity_from_log(state)
             idle_seconds = int(state.get("idle_seconds", DEFAULT_IDLE_SECONDS))
             idle_for = time.time() - float(state.get("last_activity_at", time.time()))
             if idle_for >= idle_seconds:
@@ -175,6 +176,21 @@ def mark_activity() -> None:
         if is_pid_alive(state.get("pid")):
             touch_state(state)
             save_state(state)
+
+
+def _refresh_activity_from_log(state: dict[str, Any]) -> None:
+    log_path = state.get("log_path")
+    if not log_path:
+        return
+    try:
+        mtime = os.path.getmtime(log_path)
+    except OSError:
+        return
+    last_mtime = state.get("last_log_mtime")
+    if last_mtime is None or mtime > last_mtime:
+        state["last_log_mtime"] = mtime
+        touch_state(state)
+        save_state(state)
 
 
 def _refresh_activity_from_cpu(state: dict[str, Any], pid: int) -> None:
