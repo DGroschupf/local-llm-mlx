@@ -706,12 +706,14 @@ name = "local-llm"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "huggingface-hub" },
     { name = "mlx-lm" },
     { name = "mlx-optiq" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "huggingface-hub", specifier = ">=0.25" },
     { name = "mlx-lm", specifier = ">=0.31.3" },
     { name = "mlx-optiq", specifier = ">=0.4.27" },
 ]

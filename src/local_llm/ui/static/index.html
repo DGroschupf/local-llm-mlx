@@ -50,6 +50,29 @@
           </div>
         </div>
 
+        <div class="model-group">
+          <h3>Qwen 3 · 14B</h3>
+          <div class="actions">
+            <button type="button" class="primary btn-glow" data-start-model="qwen3-14b" data-backend="mlx">Chat</button>
+            <button type="button" class="secondary" data-start-model="qwen3-14b" data-backend="agent">Agent API</button>
+          </div>
+        </div>
+
+        <div class="model-group">
+          <h3>Gemma 4 · 12B</h3>
+          <div class="actions">
+            <button type="button" class="primary btn-glow" data-start-model="gemma4-12b" data-backend="mlx">Chat</button>
+          </div>
+        </div>
+
+        <div class="model-group">
+          <h3>Ministral 3 · 14B</h3>
+          <div class="actions">
+            <button type="button" class="primary btn-glow" data-start-model="ministral3-14b" data-backend="mlx">Chat</button>
+            <button type="button" class="secondary" data-start-model="ministral3-14b" data-backend="agent">Agent API</button>
+          </div>
+        </div>
+
         <div class="actions stop-action">
           <button type="button" class="secondary full-width" data-action="stop" style="margin-bottom: 0.5rem;">
             <span class="icon">⏹</span> Stop Model
@@ -83,6 +106,14 @@
           </div>
         </div>
         <div id="fit" class="fit-list mt-3"></div>
+      </section>
+
+      <section class="panel glass-panel stack">
+        <div class="section-header">
+          <h2><span class="icon">💾</span> Downloaded Models</h2>
+        </div>
+        <p class="muted text-small">Weights cached on disk from Hugging Face. Delete ones you no longer need.</p>
+        <div id="cacheList" class="fit-list mt-3"></div>
       </section>
 
     </div>

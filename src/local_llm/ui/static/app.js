@@ -44,6 +44,8 @@ async function api(path, options = {}) {
 async function refresh() {
   const status = await api("/api/status");
   renderStatus(status);
+  const cache = await api("/api/cache");
+  renderCache(cache);
 }
 
 async function startModel(name, backend) {
@@ -203,6 +205,8 @@ function renderStatus(status) {
     button.textContent = isActive ? `${button.dataset.label} · Running` : button.dataset.label;
   });
 
+  renderDownloadBadges(status.models || {});
+
   const pulse = document.querySelector(".pulse");
   if (pulse) {
     pulse.className = `pulse ${active ? "active" : ""}`;
@@ -254,6 +258,96 @@ function fitCards(models) {
     card.append(title, message);
     return card;
   });
+}
+
+function renderDownloadBadges(models) {
+  document.querySelectorAll(".model-group").forEach((group) => {
+    const button = group.querySelector("[data-start-model]");
+    if (!button) return;
+    const info = models[button.dataset.startModel];
+
+    let badge = group.querySelector(".download-badge");
+    if (!badge) {
+      badge = document.createElement("span");
+      badge.className = "download-badge";
+      group.querySelector("h3")?.append(badge);
+    }
+    if (info && info.downloaded) {
+      badge.textContent = `${info.size_on_disk_gb.toFixed(2)} GB on disk`;
+      badge.classList.add("downloaded");
+    } else {
+      badge.textContent = "not downloaded";
+      badge.classList.remove("downloaded");
+    }
+  });
+}
+
+function renderCache(entries) {
+  const list = document.getElementById("cacheList");
+  if (!list) return;
+
+  if (!entries.length) {
+    list.replaceChildren(Object.assign(document.createElement("p"), {
+      className: "muted",
+      textContent: "Nothing cached yet.",
+    }));
+    return;
+  }
+
+  list.replaceChildren(...entries.map((entry) => {
+    const card = document.createElement("div");
+    card.className = "fit-card";
+
+    const title = document.createElement("div");
+    title.className = "fit-title";
+
+    const name = document.createElement("strong");
+    name.textContent = entry.model_name ? `${entry.model_name}` : entry.repo_id;
+
+    const size = document.createElement("span");
+    size.className = "muted";
+    size.textContent = `${entry.size_gb.toFixed(2)} GB`;
+
+    title.append(name, size);
+
+    const path = document.createElement("div");
+    path.className = "muted text-small";
+    path.textContent = entry.repo_id;
+
+    const actions = document.createElement("div");
+    actions.className = "actions row-actions";
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "danger";
+    deleteBtn.textContent = entry.active ? "Active · Stop to delete" : "Delete";
+    deleteBtn.disabled = entry.active || state.busy;
+    deleteBtn.addEventListener("click", () => deleteCacheEntry(entry.repo_id, deleteBtn));
+    actions.append(deleteBtn);
+
+    card.append(title, path, actions);
+    return card;
+  }));
+}
+
+async function deleteCacheEntry(repoId, button) {
+  if (state.busy) return;
+  if (!confirm(`Delete ${repoId} from disk? This cannot be undone.`)) return;
+
+  state.busy = true;
+  const originalText = button.textContent;
+  button.textContent = "Deleting...";
+  button.disabled = true;
+  try {
+    await api(`/api/cache/${encodeURIComponent(repoId)}`, { method: "DELETE" });
+    await refresh();
+  } catch (err) {
+    alert("Failed to delete: " + err.message);
+    button.textContent = originalText;
+    button.disabled = false;
+  } finally {
+    state.busy = false;
+  }
 }
 
 function commandText(commands) {

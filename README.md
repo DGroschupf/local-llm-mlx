@@ -7,10 +7,11 @@ It gives you an `ollama`-like command surface for:
 
 - Qwen3.8-9B 4-bit as the daily driver
 - Devstral Small 2 24B OptiQ 4-bit as heavy coding mode
+- Qwen 3 14B, Gemma 4 12B, and Ministral 3 14B as protocol-model candidates
 - one active model server at a time
 - idle unloading
 - a local dashboard for starting/stopping models and watching memory pressure
-  - Qwen and Devstral agent modes through `mlx-optiq`
+  - agent mode through `mlx-optiq` for Qwen, Devstral, Qwen 3 14B, and Ministral 3 14B
 
 ## Project Structure
 
@@ -90,6 +91,29 @@ the idle timer even when a client calls `mlx_lm.server` directly.
 In agent mode, `optiq serve` also receives an `--idle-timeout` value so it can
 release the model internally after being idle.
 
+List models with their local disk status (downloaded or not, size on disk):
+
+```bash
+uv run local-llm models
+```
+
+Manage the local Hugging Face cache — list every cached repo (including ones not
+in the profile list) or delete one to free disk space:
+
+```bash
+uv run local-llm cache list
+uv run local-llm cache rm mlx-community/gemma-4-12B-it-4bit
+```
+
+Delete the cached weights for a configured model by name:
+
+```bash
+uv run local-llm rm gemma4-12b
+```
+
+Both `rm` and `cache rm` refuse to delete the currently active model server's
+weights — run `uv run local-llm stop` first.
+
 Check status:
 
 ```bash
@@ -134,6 +158,8 @@ The dashboard can:
 - estimate whether each model currently looks comfortable, tight, or risky
 - send browser-chat prompts through the running local server
 - copy a Claude Code command for the local Devstral agent server
+- show which models are already downloaded, with size on disk
+- delete cached model weights you no longer need, right from the dashboard
 
 The current UI is dependency-free static HTML/CSS/JS served by the Python CLI.
 It is intentionally split into separate files so a React/Vite frontend can later
@@ -147,6 +173,17 @@ replace `ui/static/` while keeping the same backend endpoints:
 |---|---|---:|---:|---:|
 | `qwen` | `keXjos/Qwen3.8-9B-mlx-4Bit` | daily driver | 32768 | 2048 |
 | `devstral` | `mlx-community/Devstral-Small-2-24B-Instruct-2512-OptiQ-4bit` | heavy coding | 16384 | 2048 |
+| `qwen3-14b` | `mlx-community/Qwen3-14B-4bit` | protocol candidate | 24576 | 2048 |
+| `gemma4-12b` | `mlx-community/gemma-4-12B-it-4bit` | protocol candidate | 24576 | 2048 |
+| `ministral3-14b` | `mlx-community/Ministral-3-14B-Instruct-2512-4bit` | protocol candidate | 24576 | 2048 |
+
+`qwen3-14b` and `ministral3-14b` have confirmed tool-calling support and can run
+with `--backend agent`. `gemma4-12b` currently fails to load at all (`ValueError:
+Received 11 parameters not in model: vision_embedder.*`) — the mlx-community 4-bit
+quant ships Gemma 4's vision tower weights, and mlx-lm 0.31.3 (the latest release
+as of 2026-08-22) doesn't have a model class for them yet. Both `mlx` and `agent`
+backends hit the same load path, so this isn't just an agent-mode gap — chat mode
+is broken too, for either backend. Revisit once mlx-lm ships Gemma 4 support.
 
 `mlx_lm.chat` supports `--max-kv-size`, so the terminal chat command uses the
 profile-specific KV sizes. The installed `mlx_lm.server` does not expose that flag,

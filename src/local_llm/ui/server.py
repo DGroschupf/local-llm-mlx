@@ -9,12 +9,15 @@ from pathlib import Path
 from threading import Thread
 from typing import Any
 
+from urllib.parse import unquote
+
 from local_llm.config import (
     DEFAULT_IDLE_SECONDS,
     DEFAULT_SUPERVISOR_TICK_SECONDS,
     DEFAULT_UI_REFRESH_SECONDS,
     LOCAL_AUTH_TOKEN,
 )
+from local_llm.downloads import delete_repo, scan_downloaded
 from local_llm.models import MODELS, model_payload
 from local_llm.processes import is_pid_alive
 from local_llm.state import load_state, save_state, state_lock
@@ -88,6 +91,8 @@ def _make_handler(
                 self._send_json(build_status())
             elif self.path == "/api/models":
                 self._send_json(model_payload())
+            elif self.path == "/api/cache":
+                self._send_json(_cache_payload())
             elif self.path == "/v1/models":
                 self._handle_v1_models()
             else:
@@ -125,6 +130,24 @@ def _make_handler(
                 self._handle_chat()
             elif self.path.startswith("/v1/"):
                 self._handle_v1_proxy()
+            else:
+                self.send_error(404)
+
+        def do_DELETE(self) -> None:
+            if self.path.startswith("/api/cache/"):
+                repo_id = unquote(self.path[len("/api/cache/") :])
+                state = load_state()
+                if is_pid_alive(state.get("pid")) and state.get("model") == repo_id:
+                    self.send_error(
+                        409, "Cannot delete the active model. Stop it first."
+                    )
+                    return
+                try:
+                    freed = delete_repo(repo_id)
+                except KeyError:
+                    self.send_error(404, "Repo is not in the local cache")
+                    return
+                self._send_json({"ok": True, "freed_bytes": freed})
             else:
                 self.send_error(404)
 
@@ -433,3 +456,22 @@ def _make_handler(
             return
 
     return Handler
+
+
+def _cache_payload() -> list[dict[str, Any]]:
+    registered_by_repo = {profile.model: name for name, profile in MODELS.items()}
+    state = load_state()
+    active_repo = state.get("model") if is_pid_alive(state.get("pid")) else None
+
+    entries = []
+    for repo_id, cached in scan_downloaded().items():
+        entries.append(
+            {
+                "repo_id": repo_id,
+                "model_name": registered_by_repo.get(repo_id),
+                "size_gb": round(cached.size_bytes / 1e9, 2),
+                "active": repo_id == active_repo,
+            }
+        )
+    entries.sort(key=lambda entry: -entry["size_gb"])
+    return entries
